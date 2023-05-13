@@ -1,0 +1,178 @@
+-- use sql project
+
+use SQLProject;
+
+-- view house data
+
+Select *
+From NashvilleHousing;
+
+-- working on saleDate column . Format saleDate column to date column
+
+Select saleDate, CONVERT(date, saleDate) newsaleDate
+From NashvilleHousing;
+
+-- create a new column saledateconverted
+
+Alter Table NashvilleHousing
+Add saleDateConverted Date;
+
+Update NashvilleHousing
+set saleDateConverted = CONVERT(date, saleDate);
+
+-- view the new date column
+
+select saleDate, saleDateConverted
+from NashvilleHousing
+
+--- populate property address column
+
+select *
+from NashvilleHousing
+where PropertyAddress is null
+--order by ParcelID 
+
+--- use a self join to join the table to itself
+
+
+select a.ParcelID, a.PropertyAddress, b.ParcelID, b.PropertyAddress, ISNULL(a.PropertyAddress, b.PropertyAddress)
+from NashvilleHousing a
+join NashvilleHousing b
+   on ( a.ParcelID = b.ParcelID
+     and a.[UniqueID ] <> b.[UniqueID ])
+where a.PropertyAddress is null
+
+
+Update a
+set PropertyAddress = ISNULL(a.PropertyAddress, b.PropertyAddress)
+from NashvilleHousing a
+join NashvilleHousing b
+   on ( a.ParcelID = b.ParcelID
+     and a.[UniqueID ] <> b.[UniqueID ])
+where a.PropertyAddress is null
+
+--- use substring and charindex to create address, city and state from PropertyAddress 
+
+select PropertyAddress
+from NashvilleHousing;
+
+
+select
+SUBSTRING(PropertyAddress,1, CHARINDEX(',', PropertyAddress)-1) Address,
+SUBSTRING(PropertyAddress, CHARINDEX(',', PropertyAddress)+1, LEN(PropertyAddress)) City
+from NashvilleHousing;
+
+--- use Alter and update to insert PropertySplitAddress and PropertySplitCity
+
+
+Alter Table NashvilleHousing
+Add PropertySplitAddress nvarchar(255);
+
+Update NashvilleHousing
+set PropertySplitAddress = SUBSTRING(PropertyAddress,1, CHARINDEX(',', PropertyAddress)-1);
+
+--- repeat same for PropertySplitCity
+
+Alter Table NashvilleHousing
+Add PropertySplitCity nvarchar(255);
+
+Update NashvilleHousing
+set PropertySplitCity = SUBSTRING(PropertyAddress, CHARINDEX(',', PropertyAddress)+1, LEN(PropertyAddress));
+
+
+select *
+from NashvilleHousing
+--order by saleDateConverted;
+
+--- split ownerAddress column 
+
+select OwnerAddress
+from NashvilleHousing;
+
+select 
+PARSENAME(Replace(OwnerAddress,',', '.'), 3),
+PARSENAME(Replace(OwnerAddress,',', '.'), 2),
+PARSENAME(Replace(OwnerAddress,',', '.'), 1)
+from NashvilleHousing
+
+-- create a column ownersplit Address
+
+Alter Table NashvilleHousing
+Add OwnerSplitAddress nvarchar(255);
+
+Update NashvilleHousing
+set OwnerSplitAddress = PARSENAME(Replace(OwnerAddress,',', '.'), 3)
+
+---create a column ownersplit City
+
+Alter Table NashvilleHousing
+Add OwnerSplitCity nvarchar(255);
+
+Update NashvilleHousing
+set OwnerSplitCity = PARSENAME(Replace(OwnerAddress,',', '.'), 2)
+
+
+---create a column ownersplit State
+
+Alter Table NashvilleHousing
+Add OwnerSplitState nvarchar(255);
+
+Update NashvilleHousing
+set OwnerSplitState = PARSENAME(Replace(OwnerAddress,',', '.'), 1)
+
+
+--clean soldasvacant column 
+
+
+select SoldAsVacant,
+case when SoldAsVacant = 'Y' Then 'Yes'
+	 when SoldAsVacant = 'N' Then 'No'
+	 Else SoldAsVacant
+	 End 
+from NashvilleHousing
+
+
+Update NashvilleHousing
+set SoldAsVacant = case when SoldAsVacant = 'Y' Then 'Yes'
+	                    when SoldAsVacant = 'N' Then 'No'
+	                    Else SoldAsVacant
+	                    End 
+
+select Distinct(SoldAsVacant)
+from NashvilleHousing
+
+---remove duplicates
+
+WITH RowNumCTE AS(
+Select *,
+	ROW_NUMBER() OVER (
+	PARTITION BY ParcelID,
+				 PropertyAddress,
+				 SalePrice,
+				 SaleDate,
+				 LegalReference
+				 ORDER BY
+					UniqueID
+					) row_num
+
+From NashvilleHousing
+)
+Select *
+From RowNumCTE
+Where row_num > 1
+Order by PropertyAddress
+
+
+-- delete unwanted columns
+
+Alter table NashvilleHousing
+drop column PropertyAddress, SaleDate, OwnerAddress, TaxDistrict;
+
+
+select TOP 5 *
+from NashvilleHousing
+order by saleDateConverted;
+
+-- rename saleDateconverted column to SalaDate
+
+EXEC sp_rename 'nashvilleHousing.saleDateconverted', 'SaleDate', 'COLUMN';
