@@ -1,0 +1,245 @@
+--use SQLPractice DB
+
+USE SQLPractice;
+
+
+-- create employeedemographics table 
+
+Create Table EmployeeDemographics 
+(EmployeeID int, 
+FirstName varchar(50), 
+LastName varchar(50), 
+Age int, 
+Gender varchar(50)
+)
+
+-- create employeesalary table
+
+reate Table EmployeeSalary 
+(EmployeeID int, 
+JobTitle varchar(50), 
+Salary int
+)
+--- insert data into employeedemographics table 
+
+Insert into EmployeeDemographics VALUES
+(1001, 'Jim', 'Halpert', 30, 'Male'),
+(1002, 'Pam', 'Beasley', 30, 'Female'),
+(1003, 'Dwight', 'Schrute', 29, 'Male'),
+(1004, 'Angela', 'Martin', 31, 'Female'),
+(1005, 'Toby', 'Flenderson', 32, 'Male'),
+(1006, 'Michael', 'Scott', 35, 'Male'),
+(1007, 'Meredith', 'Palmer', 32, 'Female'),
+(1008, 'Stanley', 'Hudson', 38, 'Male'),
+(1009, 'Kevin', 'Malone', 31, 'Male')
+
+-- insert data into employeesalary table
+
+Insert Into EmployeeSalary VALUES
+(1001, 'Salesman', 45000),
+(1002, 'Receptionist', 36000),
+(1003, 'Salesman', 63000),
+(1004, 'Accountant', 47000),
+(1005, 'HR', 50000),
+(1006, 'Regional Manager', 65000),
+(1007, 'Supplier Relations', 41000),
+(1008, 'Salesman', 48000),
+(1009, 'Accountant', 42000)
+
+-- view employeedemographic table
+
+select *
+from EmployeeDemographics;
+
+-- view employeesalary table
+
+select *
+from EmployeeSalary;
+
+-- update employeedemographics table 
+
+Insert into EmployeeDemographics VALUES
+(1011, 'Ryan', 'Howard', 26, 'Male'),
+(NULL, 'Holly', 'Flax', NULL, NULL),
+(1013, 'Darryl', 'Philbin', NULL, 'Male')
+
+
+-- create warehouseemployeeDemographics table
+
+Create Table WareHouseEmployeeDemographics 
+(EmployeeID int, 
+FirstName varchar(50), 
+LastName varchar(50), 
+Age int, 
+Gender varchar(50)
+)
+
+--- insert data into WareHouseEmployeeDemographics table
+
+Insert into WareHouseEmployeeDemographics VALUES
+(1013, 'Darryl', 'Philbin', NULL, 'Male'),
+(1050, 'Roy', 'Anderson', 31, 'Male'),
+(1051, 'Hidetoshi', 'Hasagawa', 40, 'Male'),
+(1052, 'Val', 'Johnson', 31, 'Female')
+
+-- view WareHouseEmployeeDemographics table
+
+select *
+from WareHouseEmployeeDemographics;
+
+-- maximum employees salary
+
+select jobtitle, MAX(salary)  Max_salary
+from EmployeeDemographics ed
+join EmployeeSalary es
+on (ed.EmployeeID = es.EmployeeID)
+group by jobtitle
+order by Max_salary;
+
+-- average salary by jobtitle
+
+select jobtitle, avg(salary)  avg_salary
+from EmployeeDemographics ed
+join EmployeeSalary es
+on (ed.EmployeeID = es.EmployeeID)
+group by jobtitle
+order by avg_salary;
+
+
+-- employee with the highest salary and department
+
+select FirstName, jobtitle, salary
+from EmployeeDemographics Demo
+left join EmployeeSalary Sal
+on (Demo.EmployeeID = Sal.EmployeeID)
+order by salary desc;
+
+-- update employeedemographics table
+
+update EmployeeDemographics
+set EmployeeID = 1012
+where FirstName = 'Holly';
+
+-- view employeedemographics table to verify the update
+
+select *
+from EmployeeDemographics;
+
+-- update employeedemographics table to fill up age and gender column of Holly
+
+update EmployeeDemographics
+set Age = 31, Gender = 'Female'
+where FirstName = 'Holly';
+
+-- use case statement to group the age column
+
+select *,
+case
+   when age > 30 then 'Old'
+   else 'young'
+   end as Age_group
+from EmployeeDemographics
+
+-- create a Salary group column with case statement
+
+select *,
+case
+  when salary > 48000 then 'Above Average'
+  else 'Below Average'
+  End as Salary_group
+from (EmployeeDemographics Demo
+join EmployeeSalary Sal
+on Demo.EmployeeID = Sal.EmployeeID)
+
+-- Partition by
+
+select FirstName, LastName, Gender, Salary
+, COUNT(gender) over (Partition by Gender) Total_gender
+from EmployeeDemographics Demo
+Join EmployeeSalary Sal
+on ( Demo.EmployeeID = Sal.EmployeeID);
+
+--- Ctes
+
+With Ctes_Employee As
+( select FirstName, LastName, Gender, Salary
+, COUNT(gender) over (Partition by Gender) Total_gender
+, AVG(salary) over (Partition by Gender)  Average_Salary
+from EmployeeDemographics Demo
+Join EmployeeSalary Sal
+on ( Demo.EmployeeID = Sal.EmployeeID)
+Where Salary > 45000
+)
+select FirstName, LastName, Average_Salary
+from Ctes_Employee;
+
+
+-- stored procedure
+
+create procedure TEST
+As
+select *
+from EmployeeDemographics
+
+
+
+EXEC TEST
+
+
+-- stored procedure using Temp_table
+
+
+CREATE PROCEDURE Temp_Employee_1
+AS
+DROP TABLE IF EXISTS #temp_employee
+Create table #temp_employee (
+JobTitle varchar(100),
+EmployeesPerJob int ,
+AvgAge int,
+AvgSalary int
+)
+
+
+Insert into #temp_employee
+SELECT JobTitle, Count(JobTitle), Avg(Age), AVG(salary)
+FROM EmployeeDemographics emp
+JOIN EmployeeSalary sal
+	ON emp.EmployeeID = sal.EmployeeID
+group by JobTitle
+
+Select * 
+From #temp_employee
+GO;
+
+
+EXEC Temp_Employee_1;
+
+
+
+CREATE PROCEDURE Temp_Employee_2 
+@JobTitle nvarchar(100)
+AS
+DROP TABLE IF EXISTS #temp_employee3
+Create table #temp_employee3 (
+JobTitle varchar(100),
+EmployeesPerJob int ,
+AvgAge int,
+AvgSalary int
+)
+
+
+Insert into #temp_employee3
+SELECT JobTitle, Count(JobTitle), Avg(Age), AVG(salary)
+FROM EmployeeDemographics emp
+JOIN EmployeeSalary sal
+	ON emp.EmployeeID = sal.EmployeeID
+where JobTitle = @JobTitle 
+group by JobTitle
+
+Select * 
+From #temp_employee3
+GO;
+
+
+EXEC Temp_Employee_2 @jobtitle = 'Accountant'
+
